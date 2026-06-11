@@ -26,7 +26,34 @@ A full-stack web application built with **Next.js 16**, **Prisma 7**, and **Post
 | Validation | Zod v4 |
 | Icons | Lucide React |
 
-## Getting Started
+## Quick Start (Docker)
+
+```bash
+docker compose up
+```
+
+That's it. Opens at **http://localhost:3000**.
+
+On first boot the entrypoint automatically:
+1. Waits for PostgreSQL to be healthy
+2. Runs `prisma db push` to create all tables
+3. Seeds the database with 45 skills and 3 demo users
+4. Starts the Next.js app
+
+> First run requires building the image — takes ~2 min. Subsequent starts are instant.
+
+```bash
+# Rebuild after code changes
+docker compose up --build
+
+# Tear down (keeps DB volume)
+docker compose down
+
+# Tear down and wipe database
+docker compose down -v
+```
+
+## Local Development (without Docker)
 
 ### Prerequisites
 
