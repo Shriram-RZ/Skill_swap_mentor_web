@@ -1,0 +1,173 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  password       String
+  bio            String?
+  avatar         String?
+  location       String?
+  website        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  skills             UserSkill[]
+  sentRequests       SwapRequest[]  @relation("SentRequests")
+  receivedRequests   SwapRequest[]  @relation("ReceivedRequests")
+  sentMessages       Message[]      @relation("SentMessages")
+  conversations1     Conversation[] @relation("Participant1")
+  conversations2     Conversation[] @relation("Participant2")
+  mentorSessions     Session[]      @relation("MentorSessions")
+  menteeSessions     Session[]      @relation("MenteeSessions")
+  givenReviews       Review[]       @relation("GivenReviews")
+  receivedReviews    Review[]       @relation("ReceivedReviews")
+  notifications      Notification[]
+}
+
+model Skill {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  category   String
+  userSkills UserSkill[]
+}
+
+model UserSkill {
+  id      String         @id @default(cuid())
+  userId  String
+  skillId String
+  type    SkillType
+  level   SkillLevel     @default(BEGINNER)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId, type])
+}
+
+model SwapRequest {
+  id         String        @id @default(cuid())
+  senderId   String
+  receiverId String
+  message    String
+  status     RequestStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  sender   User      @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User      @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+  sessions Session[]
+}
+
+model Conversation {
+  id             String    @id @default(cuid())
+  participant1Id String
+  participant2Id String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  participant1 User      @relation("Participant1", fields: [participant1Id], references: [id], onDelete: Cascade)
+  participant2 User      @relation("Participant2", fields: [participant2Id], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@unique([participant1Id, participant2Id])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id            String        @id @default(cuid())
+  mentorId      String
+  menteeId      String
+  swapRequestId String?
+  scheduledAt   DateTime
+  duration      Int
+  status        SessionStatus @default(UPCOMING)
+  notes         String?
+  meetingLink   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  mentor      User         @relation("MentorSessions", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee      User         @relation("MenteeSessions", fields: [menteeId], references: [id], onDelete: Cascade)
+  swapRequest SwapRequest? @relation(fields: [swapRequestId], references: [id])
+  review      Review?
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  reviewerId String
+  revieweeId String
+  sessionId  String   @unique
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  reviewer User    @relation("GivenReviews", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewee User    @relation("ReceivedReviews", fields: [revieweeId], references: [id], onDelete: Cascade)
+  session  Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  relatedId String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum SkillType {
+  TEACH
+  LEARN
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+}
+
+enum SessionStatus {
+  UPCOMING
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  SWAP_REQUEST
+  REQUEST_ACCEPTED
+  REQUEST_REJECTED
+  NEW_MESSAGE
+  SESSION_SCHEDULED
+  SESSION_REMINDER
+  REVIEW_RECEIVED
+}
