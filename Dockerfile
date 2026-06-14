@@ -30,7 +30,8 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/prisma ./prisma
 
 COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+# Strip any CR (Windows CRLF) so the shebang isn't read as "/bin/sh\r", then make executable.
+RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh
 
 EXPOSE 3000
 ENTRYPOINT ["./entrypoint.sh"]
