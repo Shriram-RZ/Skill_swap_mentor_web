@@ -13,6 +13,7 @@ import {
   Bell,
   User,
   LogOut,
+  Users,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/requests", icon: ArrowLeftRight, label: "Requests" },
   { href: "/messages", icon: MessageSquare, label: "Messages" },
   { href: "/sessions", icon: Calendar, label: "Sessions" },
+  { href: "/groups", icon: Users, label: "Groups" },
   { href: "/reviews", icon: Star, label: "Reviews" },
   { href: "/notifications", icon: Bell, label: "Notifications" },
 ];

@@ -130,6 +130,76 @@ async function main() {
     });
   }
 
+  // Demo group: "Web Dev Squad" owned by Alice, with Bob & Carol as members.
+  const existingGroup = await prisma.group.findFirst({ where: { name: "Web Dev Squad", ownerId: alice.id } });
+  if (!existingGroup) {
+    const group = await prisma.group.create({
+      data: {
+        name: "Web Dev Squad",
+        description: "Learning web development together, one week at a time.",
+        ownerId: alice.id,
+        memberships: {
+          create: [
+            { userId: alice.id, role: "OWNER", status: "ACTIVE" },
+            { userId: bob.id, role: "MEMBER", status: "ACTIVE" },
+            { userId: carol.id, role: "MEMBER", status: "ACTIVE" },
+          ],
+        },
+      },
+    });
+
+    // Sample roadmap mirroring the classic HTML -> CSS -> JS -> Project path.
+    const roadmap = await prisma.roadmap.create({
+      data: {
+        groupId: group.id,
+        title: "Web Development Fundamentals",
+        skillName: "Web Development",
+        description: "A 4-week path from HTML to a first mini-project.",
+        source: "MANUAL",
+        createdById: alice.id,
+        weeks: {
+          create: [
+            { weekNumber: 1, title: "HTML", order: 0, tasks: { create: [
+              { title: "Learn semantic HTML tags", xp: 10, order: 0 },
+              { title: "Build a profile page layout", xp: 20, order: 1 },
+            ] } },
+            { weekNumber: 2, title: "CSS", order: 1, tasks: { create: [
+              { title: "Box model & selectors", xp: 10, order: 0 },
+              { title: "Flexbox layout exercise", xp: 20, order: 1 },
+            ] } },
+            { weekNumber: 3, title: "JavaScript", order: 2, tasks: { create: [
+              { title: "Variables, functions, arrays", xp: 15, order: 0 },
+              { title: "DOM manipulation mini-task", xp: 25, order: 1 },
+            ] } },
+            { weekNumber: 4, title: "Mini Project", order: 3, tasks: { create: [
+              { title: "Build a to-do app", xp: 40, order: 0 },
+            ] } },
+          ],
+        },
+      },
+      include: { weeks: { include: { tasks: true } } },
+    });
+
+    // Bob completes week 1 to give the dashboard some XP to show.
+    const week1Tasks = roadmap.weeks.find((w) => w.weekNumber === 1)?.tasks ?? [];
+    for (const t of week1Tasks) {
+      await prisma.roadmapTaskCompletion.create({ data: { taskId: t.id, userId: bob.id } });
+    }
+
+    await prisma.knowledgeResource.create({
+      data: {
+        groupId: group.id,
+        uploadedById: alice.id,
+        title: "MDN: HTML basics",
+        type: "NOTE",
+        content: "Start with semantic elements: header, nav, main, section, article, footer. Use them to outline a page before styling.",
+        description: "Quick reference for week 1.",
+      },
+    });
+
+    console.log("Created demo group 'Web Dev Squad' with a sample roadmap & note");
+  }
+
   console.log("Created 3 demo users (alice@example.com, bob@example.com, carol@example.com) with password: password123");
   console.log("Seeding complete!");
 }

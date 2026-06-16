@@ -13,6 +13,13 @@ A full-stack web application built with **Next.js 16**, **Prisma 7**, and **Post
 - **Session Scheduling** — Book mentorship sessions with date/time, duration, and meeting link
 - **Reviews & Ratings** — 5-star reviews with comments after completed sessions
 - **Notifications** — In-app activity feed for all events
+- **Friend Groups** — Create squads, invite friends by email, learn together
+- **Skill Progress Dashboard** — Per-member hours taught/learned, tasks & skills completed, XP leaderboard
+- **AI Learning Roadmaps** _(Groq)_ — Generate week-by-week roadmaps; earn XP by completing tasks
+- **Knowledge Repository** — Shared notes plus PDF / video / assignment links per group
+- **AI Quiz Generator** _(Groq)_ — MCQ, coding & short-answer quizzes after each lesson, auto-graded
+- **Weekly AI Report** _(Groq)_ — Per-member summary and a recommended next topic
+- **AI Skill Map** — Visual graph of who teaches what to whom across the group
 
 ## Tech Stack
 
@@ -78,6 +85,9 @@ npm run db:seed
 
 # Run development server
 npm run dev
+
+# (Optional) Inspect the database in a browser at http://localhost:5555
+npm run db:studio
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -96,7 +106,17 @@ Open [http://localhost:3000](http://localhost:3000).
 DATABASE_URL="postgresql://user:password@localhost:5432/skillswap"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-min-32-chars"
+
+# Groq AI API — powers roadmap/quiz/report generation.
+# Get a key at https://console.groq.com/keys
+GROQ_API_KEY="gsk_..."
+GROQ_MODEL="llama-3.1-8b-instant"   # optional
 ```
+
+> The AI features degrade gracefully: without `GROQ_API_KEY`, the **Generate** buttons
+> return a clear "AI is not configured" message and every non-AI feature keeps working.
+> With Docker, export `GROQ_API_KEY` in your shell before `docker compose up` — it is
+> passed through to the app container.
 
 ## Project Structure
 

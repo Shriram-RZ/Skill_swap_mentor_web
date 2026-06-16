@@ -37,6 +37,16 @@ export function skillLevelColor(level: string) {
   return colors[level] ?? "bg-gray-100 text-gray-800";
 }
 
+export function resourceTypeColor(type: string) {
+  const colors: Record<string, string> = {
+    NOTE: "bg-amber-100 text-amber-800",
+    PDF: "bg-red-100 text-red-800",
+    VIDEO: "bg-purple-100 text-purple-800",
+    ASSIGNMENT: "bg-blue-100 text-blue-800",
+  };
+  return colors[type] ?? "bg-gray-100 text-gray-800";
+}
+
 export function requestStatusColor(status: string) {
   const colors: Record<string, string> = {
     PENDING: "bg-yellow-100 text-yellow-800",
