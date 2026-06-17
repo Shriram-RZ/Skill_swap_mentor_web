@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
-import { Save, Plus, X, Search } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { Save, Plus, X, Search, Upload, Trash2 } from "lucide-react";
 import { skillLevelColor } from "@/lib/utils";
 
 interface Skill {
@@ -58,6 +58,9 @@ export default function EditProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   // Skill search
   const [skillQuery, setSkillQuery] = useState("");
@@ -178,6 +181,32 @@ export default function EditProfilePage() {
     setSkills((prev) => prev.filter((s) => !(s.skillId === skillId && s.type === type)));
   }
 
+  async function uploadAvatar(file: File) {
+    setUploadingAvatar(true);
+    setError("");
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body });
+    setUploadingAvatar(false);
+    if (!res.ok) {
+      setError("Avatar upload failed");
+      return;
+    }
+    const { url } = await res.json();
+    setForm((p) => ({ ...p, avatar: url }));
+  }
+
+  async function deleteAccount() {
+    setDeleting(true);
+    const res = await fetch("/api/profile", { method: "DELETE" });
+    if (!res.ok) {
+      setDeleting(false);
+      setError("Failed to delete account");
+      return;
+    }
+    await signOut({ callbackUrl: "/" });
+  }
+
   if (!profile) {
     return (
       <div className="p-8 max-w-3xl mx-auto animate-pulse">
@@ -274,14 +303,35 @@ export default function EditProfilePage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Avatar URL
+              Avatar
             </label>
+            <div className="flex items-center gap-3">
+              {form.avatar && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={form.avatar} alt="" className="w-12 h-12 rounded-full object-cover border border-slate-200" />
+              )}
+              <label className="flex items-center gap-2 cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors">
+                <Upload size={14} />
+                {uploadingAvatar ? "Uploading..." : "Upload photo"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={uploadingAvatar}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadAvatar(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
             <input
               type="url"
               value={form.avatar}
               onChange={(e) => setForm((p) => ({ ...p, avatar: e.target.value }))}
-              placeholder="https://example.com/avatar.jpg"
-              className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="...or paste an image URL"
+              className="w-full mt-2 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
@@ -454,6 +504,37 @@ export default function EditProfilePage() {
           </button>
         </div>
       </form>
+
+      {/* Danger Zone */}
+      <div className="bg-white border border-red-100 rounded-2xl p-6 mt-8">
+        <h2 className="font-semibold text-red-600 flex items-center gap-2">
+          <Trash2 size={16} /> Danger Zone
+        </h2>
+        <p className="text-sm text-slate-500 mt-1">
+          Permanently delete your account and all your data. This cannot be undone.
+        </p>
+        <div className="mt-4 max-w-sm">
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Type <span className="font-mono text-red-600">DELETE</span> to confirm
+          </label>
+          <input
+            type="text"
+            value={confirmDelete}
+            onChange={(e) => setConfirmDelete(e.target.value)}
+            placeholder="DELETE"
+            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
+          <button
+            type="button"
+            onClick={deleteAccount}
+            disabled={confirmDelete !== "DELETE" || deleting}
+            className="flex items-center gap-2 mt-3 bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Trash2 size={14} />
+            {deleting ? "Deleting..." : "Delete my account"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -8,14 +8,16 @@ import {
   LayoutDashboard, BookOpen, FolderOpen, FileQuestion, Network, FileText,
   Users, Plus, X, Sparkles, Crown, Trash2, UserPlus, Trophy,
   GraduationCap, Clock, CheckCircle2, Award, Video, ClipboardList, StickyNote, ExternalLink,
+  MessageSquare, Send, Paperclip,
 } from "lucide-react";
-import { getInitials, timeAgo, resourceTypeColor } from "@/lib/utils";
+import { getInitials, timeAgo, resourceTypeColor, formatDateTime } from "@/lib/utils";
 import { SkillMapGraph } from "@/components/groups/SkillMapGraph";
 
-type Tab = "dashboard" | "roadmaps" | "knowledge" | "quizzes" | "skillmap" | "report" | "members";
+type Tab = "dashboard" | "chat" | "roadmaps" | "knowledge" | "quizzes" | "skillmap" | "report" | "members";
 
 const TABS: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "chat", label: "Chat", icon: MessageSquare },
   { key: "roadmaps", label: "Roadmaps", icon: BookOpen },
   { key: "knowledge", label: "Knowledge", icon: FolderOpen },
   { key: "quizzes", label: "Quizzes", icon: FileQuestion },
@@ -90,6 +92,7 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
       </div>
 
       {tab === "dashboard" && <DashboardTab groupId={id} />}
+      {tab === "chat" && <ChatTab groupId={id} meId={session?.user?.id} />}
       {tab === "roadmaps" && <RoadmapsTab groupId={id} />}
       {tab === "knowledge" && <KnowledgeTab groupId={id} />}
       {tab === "quizzes" && <QuizzesTab groupId={id} />}
@@ -166,6 +169,105 @@ function DashboardTab({ groupId }: { groupId: string }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- Chat
+interface GroupMessage {
+  id: string; content: string; attachmentUrl: string | null; attachmentType: string | null; createdAt: string;
+  sender: { id: string; name: string; avatar: string | null };
+}
+function ChatTab({ groupId, meId }: { groupId: string; meId?: string }) {
+  const [messages, setMessages] = useState<GroupMessage[]>([]);
+  const [content, setContent] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const load = useCallback(async () => {
+    const res = await fetch(`/api/groups/${groupId}/messages`);
+    if (res.ok) setMessages(await res.json());
+  }, [groupId]);
+
+  // Light polling while the Chat tab is open.
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    if (!content.trim()) return;
+    const res = await fetch(`/api/groups/${groupId}/messages`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content }),
+    });
+    if (res.ok) { setContent(""); load(); }
+  }
+
+  async function sendAttachment(file: File) {
+    if (uploading) return;
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    const up = await fetch("/api/upload", { method: "POST", body });
+    setUploading(false);
+    if (!up.ok) return;
+    const { url, type } = await up.json();
+    const res = await fetch(`/api/groups/${groupId}/messages`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "", attachmentUrl: url, attachmentType: type }),
+    });
+    if (res.ok) load();
+  }
+
+  return (
+    <div className="bg-white border border-slate-100 rounded-2xl flex flex-col h-[70vh]">
+      <div className="flex-1 overflow-y-auto p-5 space-y-3">
+        {messages.length === 0 && <div className="text-center py-8 text-slate-400 text-sm">No messages yet. Say hi to the group!</div>}
+        {messages.map((m) => {
+          const isOwn = m.sender.id === meId;
+          return (
+            <div key={m.id} className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
+              {!isOwn && (
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-xs font-bold flex-shrink-0">
+                  {getInitials(m.sender.name)}
+                </div>
+              )}
+              <div className={`max-w-xs lg:max-w-md flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
+                {!isOwn && <span className="text-xs text-slate-500 mb-0.5 ml-1">{m.sender.name.split(" ")[0]}</span>}
+                <div className={`px-4 py-2.5 rounded-2xl text-sm ${isOwn ? "bg-indigo-600 text-white rounded-br-sm" : "bg-slate-50 border border-slate-100 text-slate-900 rounded-bl-sm"}`}>
+                  {m.attachmentUrl && m.attachmentType === "image" && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={m.attachmentUrl} alt="" className="rounded-lg max-w-full max-h-72 mb-1" />
+                  )}
+                  {m.attachmentUrl && m.attachmentType === "video" && (
+                    <video src={m.attachmentUrl} controls className="rounded-lg max-w-full max-h-72 mb-1" />
+                  )}
+                  {m.content}
+                </div>
+                <span className="text-xs text-slate-400 mt-1">{formatDateTime(m.createdAt)}</span>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
+      <form onSubmit={send} className="border-t border-slate-100 p-4 flex items-center gap-3">
+        <label className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center hover:bg-slate-200 cursor-pointer transition-colors flex-shrink-0">
+          <Paperclip size={16} />
+          <input type="file" accept="image/*,video/*" className="hidden" disabled={uploading}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) sendAttachment(f); e.target.value = ""; }} />
+        </label>
+        <input value={content} onChange={(e) => setContent(e.target.value)} placeholder="Message the group..."
+          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <button type="submit" disabled={!content.trim()} className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-indigo-700 disabled:opacity-50 transition-colors flex-shrink-0">
+          <Send size={16} />
+        </button>
+      </form>
     </div>
   );
 }

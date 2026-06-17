@@ -38,6 +38,8 @@ model User {
   createdQuizzes     Quiz[]                   @relation("QuizCreator")
   quizAttempts       QuizAttempt[]
   generatedReports   WeeklyReport[]           @relation("ReportGenerator")
+  roadmapReviews     RoadmapReview[]
+  groupMessages      GroupMessage[]
 }
 
 model Skill {
@@ -96,8 +98,23 @@ model Message {
   read           Boolean      @default(false)
   createdAt      DateTime     @default(now())
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  attachmentUrl  String?
+  attachmentType String?
+}
+
+model GroupMessage {
+  id             String   @id @default(cuid())
+  groupId        String
+  senderId       String
+  content        String
+  attachmentUrl  String?
+  attachmentType String?
+  createdAt      DateTime @default(now())
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id], onDelete: Cascade)
 }
 
 model Session {
@@ -203,6 +220,7 @@ model Group {
   resources   KnowledgeResource[]
   quizzes     Quiz[]
   reports     WeeklyReport[]
+  messages    GroupMessage[]
 }
 
 model GroupMembership {
@@ -229,9 +247,24 @@ model Roadmap {
   createdById String
   createdAt   DateTime       @default(now())
 
-  group     Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  createdBy User          @relation("RoadmapCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  group     Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy User            @relation("RoadmapCreator", fields: [createdById], references: [id], onDelete: Cascade)
   weeks     RoadmapWeek[]
+  reviews   RoadmapReview[]
+}
+
+model RoadmapReview {
+  id        String   @id @default(cuid())
+  roadmapId String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  roadmap Roadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roadmapId, userId])
 }
 
 model RoadmapWeek {

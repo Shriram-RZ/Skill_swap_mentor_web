@@ -24,12 +24,20 @@ interface SwapRequest {
   status: string;
 }
 
+interface Connection {
+  id: string;
+  name: string;
+}
+
 export default function SessionsPage() {
   const { data: session } = useSession();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [acceptedRequests, setAcceptedRequests] = useState<SwapRequest[]>([]);
+  const [reviewFor, setReviewFor] = useState<Session | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
   const [form, setForm] = useState({
     menteeId: "",
     scheduledAt: "",
@@ -82,8 +90,43 @@ export default function SessionsPage() {
     }
   }
 
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reviewFor) return;
+    const revieweeId =
+      reviewFor.mentor.id === session?.user?.id
+        ? reviewFor.mentee.id
+        : reviewFor.mentor.id;
+    const res = await fetch("/api/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: reviewFor.id,
+        revieweeId,
+        rating: reviewRating,
+        comment: reviewComment || undefined,
+      }),
+    });
+    if (res.ok) {
+      setReviewFor(null);
+      setReviewRating(5);
+      setReviewComment("");
+      load();
+    }
+  }
+
   const upcoming = sessions.filter((s) => s.status === "UPCOMING");
   const past = sessions.filter((s) => s.status !== "UPCOMING");
+
+  // People you can book: the "other" side of each accepted swap request, deduped.
+  const connections: Connection[] = Array.from(
+    new Map(
+      acceptedRequests.map((r) => {
+        const other = r.sender.id === session?.user?.id ? r.receiver : r.sender;
+        return [other.id, { id: other.id, name: other.name }] as const;
+      })
+    ).values()
+  );
 
   function SessionCard({ s }: { s: Session }) {
     const ismentor = s.mentor.id === session?.user?.id;
@@ -155,7 +198,12 @@ export default function SessionsPage() {
               </div>
             )}
             {s.status === "COMPLETED" && !s.review && (
-              <span className="text-xs text-slate-400">Leave a review</span>
+              <button
+                onClick={() => setReviewFor(s)}
+                className="text-xs px-2 py-1 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
+              >
+                Leave a review
+              </button>
             )}
             {s.review && (
               <div className="flex items-center gap-0.5">
@@ -261,16 +309,25 @@ export default function SessionsPage() {
               )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Mentee User ID
+                  Mentee
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={form.menteeId}
-                  onChange={(e) => setForm((p) => ({ ...p, menteeId: e.target.value }))}
-                  placeholder="Paste user ID from their profile"
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+                {connections.length > 0 ? (
+                  <select
+                    required
+                    value={form.menteeId}
+                    onChange={(e) => setForm((p) => ({ ...p, menteeId: e.target.value }))}
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">Select a person...</option>
+                    {connections.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-sm text-slate-400 border border-dashed border-slate-200 rounded-xl px-4 py-3">
+                    No connections yet. Accept a skill swap request first to book a session.
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time</label>
@@ -333,6 +390,64 @@ export default function SessionsPage() {
                   className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
                 >
                   Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {reviewFor && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-lg text-slate-900">Leave a Review</h3>
+              <button onClick={() => setReviewFor(null)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={submitReview} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Rating</label>
+                <div className="flex gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setReviewRating(i + 1)}
+                      className={`text-3xl leading-none ${i < reviewRating ? "text-amber-400" : "text-slate-200"}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Comment (optional)
+                </label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  rows={3}
+                  placeholder="How was the session?"
+                  className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReviewFor(null)}
+                  className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
+                >
+                  Submit Review
                 </button>
               </div>
             </form>

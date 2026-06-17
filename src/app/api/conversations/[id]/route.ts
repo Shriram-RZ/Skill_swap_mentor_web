@@ -59,10 +59,10 @@ export async function POST(
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await params;
-    const { content } = await req.json();
+    const { content, attachmentUrl, attachmentType } = await req.json();
 
-    if (!content?.trim()) {
-      return NextResponse.json({ error: "Content required" }, { status: 400 });
+    if (!content?.trim() && !attachmentUrl) {
+      return NextResponse.json({ error: "Content or attachment required" }, { status: 400 });
     }
 
     const conversation = await prisma.conversation.findUnique({ where: { id } });
@@ -75,7 +75,13 @@ export async function POST(
     if (!isParticipant) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const message = await prisma.message.create({
-      data: { conversationId: id, senderId: session.user.id, content: content.trim() },
+      data: {
+        conversationId: id,
+        senderId: session.user.id,
+        content: content?.trim() ?? "",
+        attachmentUrl: attachmentUrl ?? null,
+        attachmentType: attachmentType ?? null,
+      },
       include: { sender: { select: { id: true, name: true, avatar: true } } },
     });
 
@@ -94,7 +100,9 @@ export async function POST(
         userId: receiverId,
         type: "NEW_MESSAGE",
         title: "New Message",
-        message: `${session.user.name}: ${content.slice(0, 50)}${content.length > 50 ? "..." : ""}`,
+        message: content?.trim()
+          ? `${session.user.name}: ${content.slice(0, 50)}${content.length > 50 ? "..." : ""}`
+          : `${session.user.name} sent ${attachmentType === "video" ? "a video" : "a photo"}`,
         relatedId: id,
       },
     });

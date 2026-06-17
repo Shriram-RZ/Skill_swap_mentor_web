@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Sparkles, Trophy, CheckCircle2, Circle, Trash2 } from "lucide-react";
+import { Sparkles, Trophy, CheckCircle2, Circle, Trash2, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Completion { user: { id: string; name: string; avatar: string | null }; }
@@ -13,19 +13,47 @@ interface Roadmap {
   id: string; title: string; skillName: string; description: string | null; source: "AI" | "MANUAL";
   group: { id: string; name: string }; createdBy: { id: string; name: string }; weeks: Week[];
 }
+interface RoadmapReview {
+  id: string; rating: number; comment: string | null; createdAt: string;
+  user: { id: string; name: string; avatar: string | null };
+}
 
 export default function RoadmapDetailPage({ params }: { params: Promise<{ id: string; roadmapId: string }> }) {
   const { id, roadmapId } = use(params);
   const { data: session } = useSession();
   const router = useRouter();
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
+  const [reviews, setReviews] = useState<RoadmapReview[]>([]);
+  const [avg, setAvg] = useState(0);
+  const [myRating, setMyRating] = useState(5);
+  const [myComment, setMyComment] = useState("");
   const meId = session?.user?.id;
 
   async function load() {
     const res = await fetch(`/api/roadmaps/${roadmapId}`);
     if (res.ok) setRoadmap(await res.json());
   }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [roadmapId]);
+  async function loadReviews() {
+    const res = await fetch(`/api/roadmaps/${roadmapId}/reviews`);
+    if (res.ok) {
+      const data = await res.json();
+      setReviews(data.reviews);
+      setAvg(data.average);
+      const mine = data.reviews.find((r: RoadmapReview) => r.user.id === meId);
+      if (mine) { setMyRating(mine.rating); setMyComment(mine.comment ?? ""); }
+    }
+  }
+  useEffect(() => { load(); loadReviews(); /* eslint-disable-next-line */ }, [roadmapId]);
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault();
+    const res = await fetch(`/api/roadmaps/${roadmapId}/reviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: myRating, comment: myComment || undefined }),
+    });
+    if (res.ok) loadReviews();
+  }
 
   async function toggle(taskId: string) {
     await fetch(`/api/roadmap-tasks/${taskId}/complete`, { method: "POST" });
@@ -103,6 +131,55 @@ export default function RoadmapDetailPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Reviews */}
+      <div className="bg-white border border-slate-100 rounded-2xl p-5 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-slate-900">Reviews</h3>
+          {reviews.length > 0 && (
+            <span className="flex items-center gap-1 text-sm font-medium text-amber-600">
+              <Star size={14} className="fill-amber-400 text-amber-400" /> {avg.toFixed(1)} ({reviews.length})
+            </span>
+          )}
+        </div>
+
+        {pct === 100 ? (
+          <form onSubmit={submitReview} className="border border-slate-100 rounded-xl p-4 mb-4">
+            <div className="text-sm font-medium text-slate-700 mb-2">Rate this roadmap</div>
+            <div className="flex gap-1 mb-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <button key={i} type="button" onClick={() => setMyRating(i + 1)}
+                  className={`text-2xl leading-none ${i < myRating ? "text-amber-400" : "text-slate-200"}`}>★</button>
+              ))}
+            </div>
+            <textarea value={myComment} onChange={(e) => setMyComment(e.target.value)} rows={2}
+              placeholder="What did you think of this learning path?"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" />
+            <button type="submit" className="mt-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700">
+              Submit review
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm text-slate-400 mb-4">Complete all tasks to leave a review.</p>
+        )}
+
+        <div className="space-y-3">
+          {reviews.map((r) => (
+            <div key={r.id} className="border-t border-slate-100 pt-3 first:border-t-0 first:pt-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm text-slate-800">{r.user.name}</span>
+                <span className="flex">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <span key={i} className={`text-sm ${i < r.rating ? "text-amber-400" : "text-slate-200"}`}>★</span>
+                  ))}
+                </span>
+              </div>
+              {r.comment && <p className="text-sm text-slate-500 mt-1">{r.comment}</p>}
+            </div>
+          ))}
+          {reviews.length === 0 && <p className="text-sm text-slate-400">No reviews yet.</p>}
+        </div>
       </div>
     </div>
   );

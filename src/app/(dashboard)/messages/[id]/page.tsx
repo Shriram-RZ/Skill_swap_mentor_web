@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Paperclip } from "lucide-react";
 import { formatDateTime, getInitials } from "@/lib/utils";
 
 interface Message {
@@ -12,6 +12,8 @@ interface Message {
   content: string;
   createdAt: string;
   read: boolean;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
   sender: { id: string; name: string; avatar: string | null };
 }
 
@@ -28,6 +30,7 @@ export default function ConversationPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function load() {
@@ -61,6 +64,23 @@ export default function ConversationPage() {
       setContent("");
       load();
     }
+  }
+
+  async function sendAttachment(file: File) {
+    if (uploading || sending) return;
+    setUploading(true);
+    const body = new FormData();
+    body.append("file", file);
+    const up = await fetch("/api/upload", { method: "POST", body });
+    setUploading(false);
+    if (!up.ok) return;
+    const { url, type } = await up.json();
+    const res = await fetch(`/api/conversations/${params.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "", attachmentUrl: url, attachmentType: type }),
+    });
+    if (res.ok) load();
   }
 
   if (!conversation) {
@@ -133,6 +153,13 @@ export default function ConversationPage() {
                       : "bg-white border border-slate-100 text-slate-900 rounded-bl-sm"
                   }`}
                 >
+                  {msg.attachmentUrl && msg.attachmentType === "image" && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={msg.attachmentUrl} alt="" className="rounded-lg max-w-full max-h-72 mb-1" />
+                  )}
+                  {msg.attachmentUrl && msg.attachmentType === "video" && (
+                    <video src={msg.attachmentUrl} controls className="rounded-lg max-w-full max-h-72 mb-1" />
+                  )}
                   {msg.content}
                 </div>
                 <span className="text-xs text-slate-400 mt-1">
@@ -150,6 +177,20 @@ export default function ConversationPage() {
         onSubmit={sendMessage}
         className="bg-white border-t border-slate-100 px-6 py-4 flex items-center gap-3 flex-shrink-0"
       >
+        <label className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center hover:bg-slate-200 cursor-pointer transition-colors flex-shrink-0">
+          <Paperclip size={16} />
+          <input
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) sendAttachment(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
         <input
           type="text"
           value={content}

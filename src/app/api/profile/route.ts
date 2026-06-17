@@ -78,3 +78,17 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+// Permanently delete the current user. All related rows cascade (skills,
+// requests, messages, sessions, reviews, owned groups, etc.) via onDelete: Cascade.
+export async function DELETE() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    await prisma.user.delete({ where: { id: session.user.id } });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
