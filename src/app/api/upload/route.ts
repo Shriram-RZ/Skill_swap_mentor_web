@@ -23,8 +23,10 @@ export async function POST(req: NextRequest) {
 
     const isImage = file.type.startsWith("image/");
     const isVideo = file.type.startsWith("video/");
-    if (!isImage && !isVideo) {
-      return NextResponse.json({ error: "Only image or video files are allowed" }, { status: 400 });
+    const isAudio = file.type.startsWith("audio/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isVideo && !isAudio && !isPdf) {
+      return NextResponse.json({ error: "Only image, video, audio, or PDF files are allowed" }, { status: 400 });
     }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: "File exceeds 25 MB limit" }, { status: 400 });
@@ -38,7 +40,8 @@ export async function POST(req: NextRequest) {
     await mkdir(UPLOAD_DIR, { recursive: true });
     await writeFile(path.join(UPLOAD_DIR, filename), Buffer.from(await file.arrayBuffer()));
 
-    return NextResponse.json({ url: `/uploads/${filename}`, type: isImage ? "image" : "video" }, { status: 201 });
+    const type = isImage ? "image" : isVideo ? "video" : isAudio ? "audio" : "pdf";
+    return NextResponse.json({ url: `/uploads/${filename}`, type }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }

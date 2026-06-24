@@ -53,12 +53,14 @@ export default function SessionsPage() {
       fetch("/api/swap-requests?filter=all"),
     ]);
     const [sessData, reqData] = await Promise.all([sessRes.json(), reqRes.json()]);
-    setSessions(Array.isArray(sessData) ? sessData : []);
+    const loaded: Session[] = Array.isArray(sessData) ? sessData : [];
+    setSessions(loaded);
     const accepted = Array.isArray(reqData)
       ? reqData.filter((r: SwapRequest) => r.status === "ACCEPTED")
       : [];
     setAcceptedRequests(accepted);
     setLoading(false);
+    return loaded;
   }
 
   useEffect(() => { load(); }, []);
@@ -69,7 +71,11 @@ export default function SessionsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    load();
+    const updated = await load();
+    if (status === "COMPLETED") {
+      const justDone = updated.find((s) => s.id === id);
+      if (justDone && !justDone.review) setReviewFor(justDone);
+    }
   }
 
   async function createSession(e: React.FormEvent) {

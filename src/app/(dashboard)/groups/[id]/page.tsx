@@ -247,6 +247,15 @@ function ChatTab({ groupId, meId }: { groupId: string; meId?: string }) {
                   {m.attachmentUrl && m.attachmentType === "video" && (
                     <video src={m.attachmentUrl} controls className="rounded-lg max-w-full max-h-72 mb-1" />
                   )}
+                  {m.attachmentUrl && m.attachmentType === "audio" && (
+                    <audio src={m.attachmentUrl} controls className="w-full mb-1" />
+                  )}
+                  {m.attachmentUrl && m.attachmentType === "pdf" && (
+                    <div className="mb-1">
+                      <embed src={m.attachmentUrl} type="application/pdf" className="w-full rounded-lg" style={{ height: "280px" }} />
+                      <a href={m.attachmentUrl} target="_blank" rel="noreferrer" className="text-xs underline opacity-70 mt-0.5 block">Open PDF</a>
+                    </div>
+                  )}
                   {m.content}
                 </div>
                 <span className="text-xs text-slate-400 mt-1">{formatDateTime(m.createdAt)}</span>
@@ -259,7 +268,7 @@ function ChatTab({ groupId, meId }: { groupId: string; meId?: string }) {
       <form onSubmit={send} className="border-t border-slate-100 p-4 flex items-center gap-3">
         <label className="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center hover:bg-slate-200 cursor-pointer transition-colors flex-shrink-0">
           <Paperclip size={16} />
-          <input type="file" accept="image/*,video/*" className="hidden" disabled={uploading}
+          <input type="file" accept="image/*,video/*,audio/*,.pdf" className="hidden" disabled={uploading}
             onChange={(e) => { const f = e.target.files?.[0]; if (f) sendAttachment(f); e.target.value = ""; }} />
         </label>
         <input value={content} onChange={(e) => setContent(e.target.value)} placeholder="Message the group..."

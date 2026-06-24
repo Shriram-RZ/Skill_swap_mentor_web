@@ -1,0 +1,82 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e7]: SS
+          - generic [ref=e8]: SkillSwap
+        - generic [ref=e9]:
+          - link "Sign in" [ref=e10] [cursor=pointer]:
+            - /url: /login
+          - link "Get started" [ref=e11] [cursor=pointer]:
+            - /url: /register
+    - generic [ref=e12]:
+      - generic [ref=e13]: Skill Exchange Platform
+      - heading "Swap Skills, Grow Together" [level=1] [ref=e15]:
+        - text: Swap Skills,
+        - text: Grow Together
+      - paragraph [ref=e16]: Connect with passionate learners and mentors. Teach what you know, learn what you need — no money required.
+      - generic [ref=e17]:
+        - link "Start swapping skills" [ref=e18] [cursor=pointer]:
+          - /url: /register
+          - text: Start swapping skills
+          - img [ref=e19]
+        - link "Sign in to your account" [ref=e21] [cursor=pointer]:
+          - /url: /login
+    - generic [ref=e23]:
+      - generic [ref=e24]:
+        - generic [ref=e25]: 500+
+        - generic [ref=e26]: Active Users
+      - generic [ref=e27]:
+        - generic [ref=e28]: 120+
+        - generic [ref=e29]: Skills Available
+      - generic [ref=e30]:
+        - generic [ref=e31]: 1,200+
+        - generic [ref=e32]: Sessions Completed
+      - generic [ref=e33]:
+        - generic [ref=e34]: 4.8★
+        - generic [ref=e35]: Average Rating
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - heading "Everything you need to grow" [level=2] [ref=e38]
+        - paragraph [ref=e39]: A complete platform to find mentors, swap skills, and track your learning journey.
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - img [ref=e43]
+          - heading "Find Your Match" [level=3] [ref=e48]
+          - paragraph [ref=e49]: Discover people with the exact skills you want to learn, who also want to learn what you offer.
+        - generic [ref=e50]:
+          - img [ref=e52]
+          - heading "Skill Swap Requests" [level=3] [ref=e54]
+          - paragraph [ref=e55]: Send and receive swap requests to connect with compatible learners and mentors.
+        - generic [ref=e56]:
+          - img [ref=e58]
+          - heading "Direct Messaging" [level=3] [ref=e60]
+          - paragraph [ref=e61]: Chat with your connections to plan sessions and share resources.
+        - generic [ref=e62]:
+          - img [ref=e64]
+          - heading "Session Scheduling" [level=3] [ref=e66]
+          - paragraph [ref=e67]: Book and manage mentorship sessions with integrated scheduling.
+        - generic [ref=e68]:
+          - img [ref=e70]
+          - heading "Reviews & Ratings" [level=3] [ref=e72]
+          - paragraph [ref=e73]: Build your reputation with reviews from people you've mentored or learned from.
+        - generic [ref=e74]:
+          - img [ref=e76]
+          - heading "Track Progress" [level=3] [ref=e79]
+          - paragraph [ref=e80]: Monitor your skill development and mentorship journey over time.
+    - generic [ref=e82]:
+      - heading "Ready to start your skill journey?" [level=2] [ref=e83]
+      - paragraph [ref=e84]: Join hundreds of learners and mentors already using SkillSwap.
+      - link "Create free account" [ref=e85] [cursor=pointer]:
+        - /url: /register
+        - text: Create free account
+        - img [ref=e86]
+    - contentinfo [ref=e88]:
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - generic [ref=e92]: SS
+          - generic [ref=e93]: SkillSwap
+        - paragraph [ref=e94]: © 2025 SkillSwap. Connect. Learn. Grow.
+  - button "Open Next.js Dev Tools" [ref=e100] [cursor=pointer]:
+    - img [ref=e101]

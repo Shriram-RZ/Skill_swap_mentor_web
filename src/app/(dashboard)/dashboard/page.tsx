@@ -55,16 +55,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      const [reqRes, notifRes, sessRes] = await Promise.all([
+      const [reqRes, notifRes, sessRes, reviewRes] = await Promise.all([
         fetch("/api/swap-requests?filter=received"),
         fetch("/api/notifications"),
         fetch("/api/sessions"),
+        fetch("/api/reviews?type=received"),
       ]);
 
-      const [requests, notifications, sessions] = await Promise.all([
+      const [requests, notifications, sessions, reviewData] = await Promise.all([
         reqRes.json(),
         notifRes.json(),
         sessRes.json(),
+        reviewRes.json(),
       ]);
 
       const pending = Array.isArray(requests)
@@ -77,11 +79,17 @@ export default function DashboardPage() {
         ? sessions.filter((s: Session) => s.status === "UPCOMING")
         : [];
 
+      const reviews = Array.isArray(reviewData) ? reviewData : [];
+      const avgRating = reviews.length
+        ? reviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / reviews.length
+        : 0;
+
       setStats((prev) => ({
         ...prev,
         pendingRequests: pending,
         unreadMessages: unread,
         upcomingSessions: upcoming.length,
+        avgRating,
       }));
 
       setUpcomingSessions(upcoming.slice(0, 3));
@@ -122,6 +130,13 @@ export default function DashboardPage() {
       icon: Users,
       href: "/discover",
       color: "bg-purple-50 text-purple-600",
+    },
+    {
+      label: "Your Rating",
+      value: stats.avgRating ? `${stats.avgRating.toFixed(1)} ★` : "—",
+      icon: Star,
+      href: "/reviews",
+      color: "bg-amber-50 text-amber-600",
     },
   ];
 
@@ -253,7 +268,7 @@ export default function DashboardPage() {
             { href: "/discover", label: "Find Mentors" },
             { href: "/requests", label: "View Requests" },
             { href: "/sessions", label: "Schedule Session" },
-            { href: "/profile/edit", label: "Update Profile" },
+            { href: "/reviews", label: "My Reviews" },
           ].map((action) => (
             <Link
               key={action.href}
